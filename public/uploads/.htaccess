@@ -1,0 +1,29 @@
+# Загруженные файлы — только статика, никакого выполнения скриптов
+Options -Indexes -ExecCGI
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+RemoveHandler .php .phtml .phar .php5 .php7 .php8 .pht
+RemoveType .php .phtml .phar .php5 .php7 .php8 .pht
+<FilesMatch "\.(?i:php\d?|phtml|phar|pht|cgi|pl|py|sh|html?|js)$">
+    Require all denied
+</FilesMatch>
+
+# SVG (логотип) отдаём только с запретом скриптов: даже если открыть файл
+# напрямую, браузер не выполнит в нём ничего. Без mod_headers — не отдаём вовсе.
+<FilesMatch "\.(?i:svg)$">
+    <IfModule mod_headers.c>
+        Header set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox"
+        Header set X-Content-Type-Options "nosniff"
+    </IfModule>
+    <IfModule !mod_headers.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine Off
+</IfModule>

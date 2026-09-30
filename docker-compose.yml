@@ -1,0 +1,9 @@
+# Локальный запуск: docker compose up --build  →  http://localhost:8080
+# Корень проекта смонтирован как DocumentRoot — проверяется и корневой .htaccess.
+services:
+  web:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html

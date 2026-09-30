@@ -1,0 +1,16 @@
+# Запасной вариант, если DocumentRoot указывает на корень проекта, а не на public/.
+# Рекомендуемая настройка — DocumentRoot .../portal/public (см. README).
+Options -Indexes -MultiViews
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(app|data|bin|docker)(/|$) - [F,L]
+    RewriteRule ^(config|config\.example)\.php$ - [F,L]
+    RewriteRule ^(README\.md|Dockerfile|docker-compose\.yml|\.gitignore)$ - [F,L]
+    RewriteCond %{REQUEST_URI} !/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
