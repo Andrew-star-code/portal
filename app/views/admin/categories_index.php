@@ -4,6 +4,7 @@
   <?php if ($current): ?>
     <a class="btn" href="<?= e(url('/' . $current['slug'])) ?>" target="_blank" rel="noopener">На сайте ↗</a>
     <a class="btn" href="<?= e(url('/admin/materials/new?section=' . $current['id'])) ?>">+ Инструкция</a>
+    <a class="btn" href="<?= e(url('/admin/materials/new?section=' . $current['id'] . '&kind=link')) ?>">+ Ссылка</a>
     <a class="btn btn--primary" href="<?= e(url('/admin/categories/new?section=' . $current['id'])) ?>">+ Категория</a>
   <?php endif ?>
 </div>
@@ -21,17 +22,19 @@
 </nav>
 <?php endif ?>
 
-<p class="muted">Вкладка «<?= e($current['title']) ?>» → категории → подкатегории → инструкции. Порядок задаётся полем «Сортировка».
+<p class="muted">Вкладка «<?= e($current['title']) ?>» → категории → подкатегории → инструкции и ссылки. Порядок задаётся полем «Сортировка».
   <a href="<?= e(url('/admin/sections/' . $current['id'])) ?>">Настройки вкладки</a></p>
 
 <?php
 $renderMaterials = function (array $list) use ($current): string {
     $h = '';
     foreach ($list as $m) {
+        $badge = ['video' => 'видео', 'link' => 'ссылка'][$m['kind']] ?? 'pdf';
+        $meta = $m['kind'] === 'link' ? link_host($m['url']) : human_size((int)$m['file_size']);
         $h .= '<li class="tree-mat' . ($m['published'] ? '' : ' is-off') . '">'
-            . '<span class="kind-badge kind-badge--' . e($m['kind']) . '">' . ($m['kind'] === 'video' ? 'видео' : 'pdf') . '</span>'
+            . '<span class="kind-badge kind-badge--' . e($m['kind']) . '">' . $badge . '</span>'
             . '<a href="' . e(url('/admin/materials/' . $m['id'])) . '">' . e($m['title']) . '</a>'
-            . '<span class="muted">' . e(human_size((int)$m['file_size'])) . ($m['published'] ? '' : ' · скрыта') . '</span></li>';
+            . '<span class="muted">' . e($meta) . ($m['published'] ? '' : ' · скрыта') . '</span></li>';
     }
     return $h;
 };
@@ -45,6 +48,7 @@ $render = function (int $parent) use (&$render, $cats, $mats, $current, $renderM
             . '<span class="tree-actions">'
             . '<a href="' . e(url('/admin/categories/new?section=' . $current['id'] . '&parent=' . $id)) . '">+ подкатегория</a>'
             . '<a href="' . e(url('/admin/materials/new?section=' . $current['id'] . '&category=' . $id)) . '">+ инструкция</a>'
+            . '<a href="' . e(url('/admin/materials/new?section=' . $current['id'] . '&category=' . $id . '&kind=link')) . '">+ ссылка</a>'
             . '</span></div>';
         $inner = $render($id) . $renderMaterials($mats[$id] ?? []);
         $h .= $inner !== '' ? '<ul>' . $inner . '</ul>' : '';

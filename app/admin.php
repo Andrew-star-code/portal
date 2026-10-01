@@ -196,7 +196,8 @@ function admin_dashboard()
         'news'   => (int)db_one('SELECT COUNT(*) n FROM news')['n'],
         'pages'  => (int)db_one('SELECT COUNT(*) n FROM pages')['n'],
         'slides' => (int)db_one('SELECT COUNT(*) n FROM slides WHERE is_active = 1')['n'],
-        'materials' => (int)db_one('SELECT COUNT(*) n FROM materials')['n'],
+        'materials' => (int)db_one("SELECT COUNT(*) n FROM materials WHERE kind != 'link'")['n'],
+        'links' => (int)db_one("SELECT COUNT(*) n FROM materials WHERE kind = 'link'")['n'],
     ];
     $latest = db_all('SELECT id, title, published_at, is_published FROM news ORDER BY published_at DESC, id DESC LIMIT 5');
     render_admin('dashboard', ['counts' => $counts, 'latest' => $latest], 'Обзор', 'dashboard');
@@ -208,7 +209,7 @@ function admin_crud(string $area, $id, $action, bool $isPost)
 {
     $titles = [
         'news' => 'Новости', 'pages' => 'Страницы', 'sections' => 'Разделы', 'slides' => 'Слайды', 'users' => 'Пользователи',
-        'categories' => 'Каталоги', 'materials' => 'Инструкции',
+        'categories' => 'Каталоги', 'materials' => 'Элементы каталога',
     ];
     $navKey = $area === 'materials' ? 'categories' : $area;
 
@@ -588,7 +589,7 @@ function admin_categories_index(): array
         $cats[(int)$c['parent_id']][] = $c;
     }
     $mats = [];
-    foreach (db_all('SELECT id, category_id, slug, title, kind, file_size, published, sort FROM materials WHERE section_id = ? ORDER BY sort, id', [$current['id']]) as $m) {
+    foreach (db_all('SELECT id, category_id, slug, title, kind, file_size, url, published, sort FROM materials WHERE section_id = ? ORDER BY sort, id', [$current['id']]) as $m) {
         $mats[(int)$m['category_id']][] = $m;
     }
     return ['sections' => $sections, 'current' => $current, 'cats' => $cats, 'mats' => $mats];
@@ -698,7 +699,9 @@ function admin_materials_save($item): array
         'file_name'   => $item['file_name'] ?? '',
         'file_size'   => $item['file_size'] ?? 0,
         'kind'        => $item['kind'] ?? '',
+        'url'         => $item['url'] ?? '',
     ];
+    $isLink = $item ? $item['kind'] === 'link' : post('kind') === 'link';
     $errors = [];
     if (!$section) {
         $errors['title'] = 'Раздел-каталог не найден.';
@@ -714,7 +717,16 @@ function admin_materials_save($item): array
 
     $newFile = null;
     $file = $_FILES['file'] ?? null;
-    if ($file && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+    if ($isLink) {
+        $v['kind'] = 'link';
+        $v['url'] = post('url');
+        $v['file_path'] = '';
+        $v['file_name'] = '';
+        $v['file_size'] = 0;
+        if (!preg_match('~^(https?://\S+|/\S*)$~i', $v['url'])) {
+            $errors['url'] = 'Ссылка должна начинаться с http(s):// (другой сайт) или с / (страница этого сайта).';
+        }
+    } elseif ($file && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
         try {
             $newFile = save_uploaded_file($file, MATERIAL_TYPES, (int)config('file_max_mb'), 'files');
             $v['file_path'] = $newFile;
@@ -744,15 +756,15 @@ function admin_materials_save($item): array
         return [$v, $errors, null];
     }
 
-    $params = [$v['category_id'], $v['slug'], $v['title'], $v['description'], $v['file_path'], $v['file_name'], $v['file_size'], $v['kind'], $v['sort'], $v['published'], now()];
+    $params = [$v['category_id'], $v['slug'], $v['title'], $v['description'], $v['file_path'], $v['file_name'], $v['file_size'], $v['kind'], $v['url'], $v['sort'], $v['published'], now()];
     if ($item) {
-        db_exec('UPDATE materials SET category_id=?, slug=?, title=?, description=?, file_path=?, file_name=?, file_size=?, kind=?, sort=?, published=?, updated_at=? WHERE id=?', array_merge($params, [$item['id']]));
+        db_exec('UPDATE materials SET category_id=?, slug=?, title=?, description=?, file_path=?, file_name=?, file_size=?, kind=?, url=?, sort=?, published=?, updated_at=? WHERE id=?', array_merge($params, [$item['id']]));
         $id = (int)$item['id'];
         if ($newFile && $item['file_path'] !== $newFile) {
             delete_upload($item['file_path']);
         }
     } else {
-        db_exec('INSERT INTO materials (category_id, slug, title, description, file_path, file_name, file_size, kind, sort, published, updated_at, section_id, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', array_merge($params, [$v['section_id'], now()]));
+        db_exec('INSERT INTO materials (category_id, slug, title, description, file_path, file_name, file_size, kind, url, sort, published, updated_at, section_id, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', array_merge($params, [$v['section_id'], now()]));
         $id = (int)db()->lastInsertId();
     }
     return [$v, [], $id];

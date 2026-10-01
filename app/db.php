@@ -79,7 +79,7 @@ function db_exec(string $sql, array $params = []): int
 /** Пошаговые миграции: каждая база доводится до последней версии без потери данных. */
 function db_migrate(PDO $pdo)
 {
-    $steps = [1 => 'db_migrate_v1', 2 => 'db_migrate_v2'];
+    $steps = [1 => 'db_migrate_v1', 2 => 'db_migrate_v2', 3 => 'db_migrate_v3'];
     $version = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
     foreach ($steps as $target => $fn) {
         if ($version >= $target) {
@@ -213,6 +213,12 @@ function db_migrate_v2(PDO $pdo)
 }
 
 /** Начальное наполнение — содержимое макета. */
+/** Элементы каталога-ссылки: kind = 'link', адрес в url, файла нет. */
+function db_migrate_v3(PDO $pdo)
+{
+    $pdo->exec("ALTER TABLE materials ADD COLUMN url TEXT NOT NULL DEFAULT ''");
+}
+
 function db_seed(PDO $pdo)
 {
     $now = now();

@@ -6,6 +6,7 @@
   <a class="stat" href="<?= e(url('/admin/pages')) ?>"><b><?= $counts['pages'] ?></b><span>страниц</span></a>
   <a class="stat" href="<?= e(url('/admin/slides')) ?>"><b><?= $counts['slides'] ?></b><span>активных слайдов</span></a>
   <a class="stat" href="<?= e(url('/admin/categories')) ?>"><b><?= $counts['materials'] ?></b><span>инструкций</span></a>
+  <?php if (!empty($counts['links'])): ?><a class="stat" href="<?= e(url('/admin/categories')) ?>"><b><?= $counts['links'] ?></b><span><?= plural((int)$counts['links'], 'ссылка', 'ссылки', 'ссылок') ?> в каталогах</span></a><?php endif ?>
 </div>
 
 <h2>Последние новости</h2>

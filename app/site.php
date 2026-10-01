@@ -119,8 +119,11 @@ function site_catalog(array $section, array $rest)
             site_404();
             return;
         }
+        if ($material['kind'] === 'link') {
+            redirect(link_href($material['url']));
+        }
         $siblings = db_all(
-            'SELECT slug, title, kind FROM materials WHERE section_id = ? AND category_id IS ? AND published = 1 AND id != ? ORDER BY sort, id',
+            'SELECT slug, title, kind, url FROM materials WHERE section_id = ? AND category_id IS ? AND published = 1 AND id != ? ORDER BY sort, id',
             [$section['id'], $parentId, $material['id']]
         );
         render_site('material', ['section' => $section, 'trail' => $trail, 'm' => $material, 'siblings' => $siblings], $material['title'], $section['slug']);
@@ -129,7 +132,8 @@ function site_catalog(array $section, array $rest)
 
     $children = db_all(
         'SELECT c.*,
-            (SELECT COUNT(*) FROM materials m WHERE m.category_id = c.id AND m.published = 1) AS materials_count,
+            (SELECT COUNT(*) FROM materials m WHERE m.category_id = c.id AND m.published = 1 AND m.kind != \'link\') AS materials_count,
+            (SELECT COUNT(*) FROM materials m WHERE m.category_id = c.id AND m.published = 1 AND m.kind = \'link\') AS links_count,
             (SELECT COUNT(*) FROM categories s WHERE s.parent_id = c.id AND s.published = 1) AS children_count
          FROM categories c WHERE c.section_id = ? AND c.parent_id IS ? AND c.published = 1 ORDER BY c.sort, c.id',
         [$section['id'], $parentId]
@@ -179,11 +183,11 @@ function site_sitemap()
                 continue;
             }
             $urls[] = catalog_url($s, $trail);
-            foreach (db_all('SELECT slug FROM materials WHERE category_id = ? AND published = 1', [$c['id']]) as $m) {
+            foreach (db_all("SELECT slug FROM materials WHERE category_id = ? AND published = 1 AND kind != 'link'", [$c['id']]) as $m) {
                 $urls[] = catalog_url($s, $trail, $m['slug']);
             }
         }
-        foreach (db_all('SELECT slug FROM materials WHERE section_id = ? AND category_id IS NULL AND published = 1', [$s['id']]) as $m) {
+        foreach (db_all("SELECT slug FROM materials WHERE section_id = ? AND category_id IS NULL AND published = 1 AND kind != 'link'", [$s['id']]) as $m) {
             $urls[] = catalog_url($s, [], $m['slug']);
         }
     }

@@ -218,6 +218,18 @@ function catalog_url(array $section, array $trail = [], $materialSlug = null): s
     return url('/' . implode('/', $parts));
 }
 
+/** Короткая подпись ссылки: домен для внешней, путь для внутренней. */
+function link_host(string $link): string
+{
+    $host = parse_url($link, PHP_URL_HOST);
+    return $host ? preg_replace('~^www\.~i', '', $host) : $link;
+}
+
+function is_external_link(string $link): bool
+{
+    return (bool)preg_match('~^(https?:)?//~i', $link);
+}
+
 /** Куда ведёт вкладка меню, если это не выпадающий список. */
 function section_href(array $s): string
 {

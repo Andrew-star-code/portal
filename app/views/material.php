@@ -23,10 +23,10 @@ $src = url($m['file_path']);
     </div>
 
     <?php if ($siblings): ?>
-    <h2 class="subtitle">Другие инструкции в разделе</h2>
+    <h2 class="subtitle">Другие материалы в разделе</h2>
     <ul class="sibling-list">
-      <?php foreach ($siblings as $s): ?>
-      <li><span class="kind kind--<?= e($s['kind']) ?> kind--sm" aria-hidden="true"><?= $s['kind'] === 'video' ? '▶' : 'PDF' ?></span><a href="<?= e(catalog_url($section, $trail, $s['slug'])) ?>"><?= e($s['title']) ?></a></li>
+      <?php foreach ($siblings as $s): $isLink = $s['kind'] === 'link'; ?>
+      <li><span class="kind kind--<?= e($s['kind']) ?> kind--sm" aria-hidden="true"><?= ['video' => '▶', 'link' => '↗'][$s['kind']] ?? 'PDF' ?></span><a href="<?= e($isLink ? link_href($s['url']) : catalog_url($section, $trail, $s['slug'])) ?>"<?= $isLink && is_external_link($s['url']) ? ' target="_blank" rel="noopener"' : '' ?>><?= e($s['title']) ?></a></li>
       <?php endforeach ?>
     </ul>
     <?php endif ?>

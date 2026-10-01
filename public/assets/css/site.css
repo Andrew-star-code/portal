@@ -144,6 +144,8 @@ a{color:inherit}
 .kind--video{background:#2f4e6b;font-size:20px}
 .kind--sm{width:34px;height:26px;font-size:11px}
 .kind--video.kind--sm{font-size:12px}
+.kind--link{background:#4a6b3a;font-size:22px}
+.kind--link.kind--sm{font-size:14px}
 .material-body{flex:1;min-width:0}
 .material-title{font-size:19px;font-weight:500;color:var(--link);text-decoration:none}
 .material-title:hover{color:var(--link-hover);text-decoration:underline}
