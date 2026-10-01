@@ -38,7 +38,7 @@ function sanitize_html(string $html): string
         return '';
     }
 
-    $walk = function (DOMNode $node) use (&$walk, $allowed, $drop, $doc): void {
+    $walk = function (DOMNode $node) use (&$walk, $allowed, $drop, $doc) {
         foreach (iterator_to_array($node->childNodes) as $child) {
             if ($child instanceof DOMComment) {
                 $node->removeChild($child);

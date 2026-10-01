@@ -8,6 +8,6 @@ if (!$linkLast) {
 }
 ?>
 <nav class="crumbs" aria-label="Навигация">
-  <?php foreach ($links as $i => [$href, $title]): ?><?= $i ? ' / ' : '' ?><a href="<?= e($href) ?>"><?= e($title) ?></a><?php endforeach ?>
+  <?php foreach ($links as $i => list($href, $title)): ?><?= $i ? ' / ' : '' ?><a href="<?= e($href) ?>"><?= e($title) ?></a><?php endforeach ?>
   <?php if (!$linkLast): ?> / <span><?= e($last[1]) ?></span><?php endif ?>
 </nav>

@@ -4,7 +4,7 @@ declare(strict_types=1);
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_WINDOW_SEC = 900;
 
-function admin_session_start(): void
+function admin_session_start()
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
@@ -28,7 +28,7 @@ function admin_session_start(): void
     $_SESSION['seen'] = time();
 }
 
-function current_user(): ?array
+function current_user()
 {
     static $user = false;
     if ($user === false) {
@@ -90,14 +90,14 @@ function dummy_hash(): string
     return $h;
 }
 
-function logout(): void
+function logout()
 {
     $_SESSION = [];
     session_regenerate_id(true);
     session_destroy();
 }
 
-function password_problem(string $password): ?string
+function password_problem(string $password)
 {
     return mb_strlen($password) < 10 ? 'Пароль должен быть не короче 10 символов.' : null;
 }

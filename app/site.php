@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-function site_dispatch(array $seg): void
+function site_dispatch(array $seg)
 {
     $n = count($seg);
     if ($n === 0) {
@@ -17,7 +17,7 @@ function site_dispatch(array $seg): void
     }
 }
 
-function render_site(string $view, array $vars, string $title = '', string $active = ''): void
+function render_site(string $view, array $vars, string $title = '', string $active = '')
 {
     echo view('layout', [
         'title'   => $title,
@@ -27,14 +27,14 @@ function render_site(string $view, array $vars, string $title = '', string $acti
     ]);
 }
 
-function site_home(): void
+function site_home()
 {
     $news = db_all('SELECT slug, title, published_at FROM news WHERE is_published = 1 ORDER BY published_at DESC, id DESC LIMIT 4');
     $slides = db_all('SELECT * FROM slides WHERE is_active = 1 ORDER BY sort, id');
     render_site('home', ['news' => $news, 'slides' => $slides, 'bodyCls' => 'is-home']);
 }
 
-function site_news_list(): void
+function site_news_list()
 {
     $per = max(1, (int)config('news_per_page'));
     $total = (int)db_one('SELECT COUNT(*) AS n FROM news WHERE is_published = 1')['n'];
@@ -52,7 +52,7 @@ function site_news_list(): void
     render_site('news_list', ['items' => $items, 'page' => $page, 'pages' => $pages], 'Новости', 'news');
 }
 
-function site_news_item(string $slug): void
+function site_news_item(string $slug)
 {
     $item = db_one('SELECT * FROM news WHERE slug = ? AND is_published = 1', [$slug]);
     if (!$item) {
@@ -62,7 +62,7 @@ function site_news_item(string $slug): void
     render_site('news_item', ['item' => $item], $item['title'], 'news');
 }
 
-function site_section(string $slug, array $rest): void
+function site_section(string $slug, array $rest)
 {
     $section = db_one('SELECT * FROM sections WHERE slug = ?', [$slug]);
     if (!$section) {
@@ -96,7 +96,7 @@ function site_section(string $slug, array $rest): void
 }
 
 /** Каталог: /раздел[/категория/.../подкатегория][/инструкция] */
-function site_catalog(array $section, array $rest): void
+function site_catalog(array $section, array $rest)
 {
     $trail = [];
     $parentId = null;
@@ -147,7 +147,7 @@ function site_catalog(array $section, array $rest): void
     );
 }
 
-function site_page(array $section, string $pageSlug): void
+function site_page(array $section, string $pageSlug)
 {
     $page = db_one(
         'SELECT * FROM pages WHERE section_id = ? AND slug = ? AND published = 1',
@@ -161,7 +161,7 @@ function site_page(array $section, string $pageSlug): void
     render_site('page', ['section' => $section, 'page' => $page, 'siblings' => $siblings], $page['title'], $section['slug']);
 }
 
-function site_sitemap(): void
+function site_sitemap()
 {
     $host = (is_https() ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
     $urls = [url('/'), url('/news')];
@@ -175,7 +175,7 @@ function site_sitemap(): void
         $urls[] = catalog_url($s);
         foreach (db_all('SELECT id FROM categories WHERE section_id = ? AND published = 1', [$s['id']]) as $c) {
             $trail = category_trail((int)$c['id']);
-            if (array_filter($trail, fn($t) => !$t['published'])) {
+            if (array_filter($trail, function ($t) { return !$t['published']; })) {
                 continue;
             }
             $urls[] = catalog_url($s, $trail);
@@ -195,7 +195,7 @@ function site_sitemap(): void
     echo '</urlset>';
 }
 
-function site_404(): void
+function site_404()
 {
     http_response_code(404);
     render_site('404', [], 'Страница не найдена');

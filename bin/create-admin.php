@@ -18,7 +18,7 @@ if (!preg_match('~^[a-zA-Z0-9._-]{3,40}$~', $login)) {
 function read_secret(string $prompt): string
 {
     echo $prompt;
-    $hide = DIRECTORY_SEPARATOR === '/' && stream_isatty(STDIN);
+    $hide = DIRECTORY_SEPARATOR === '/' && (function_exists('stream_isatty') ? stream_isatty(STDIN) : (function_exists('posix_isatty') && posix_isatty(STDIN)));
     if ($hide) {
         shell_exec('stty -echo');
     }

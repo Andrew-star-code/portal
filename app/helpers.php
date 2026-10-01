@@ -1,14 +1,25 @@
 <?php
 declare(strict_types=1);
 
-function config(string $key): mixed
+function config(string $key)
 {
     return $GLOBALS['CONFIG'][$key] ?? null;
 }
 
-function e(mixed $s): string
+function e($s): string
 {
     return htmlspecialchars((string)$s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+// Замены str_starts_with()/str_ends_with() из PHP 8 — код работает и на PHP 7.
+function starts_with(string $haystack, string $needle): bool
+{
+    return strncmp($haystack, $needle, strlen($needle)) === 0;
+}
+
+function ends_with(string $haystack, string $needle): bool
+{
+    return $needle === '' || substr($haystack, -strlen($needle)) === $needle;
 }
 
 /** URL-префикс сайта без завершающего слэша ('' для корня домена). */
@@ -48,7 +59,7 @@ function asset(string $path): string
     return url($path) . $v;
 }
 
-function redirect(string $path, int $code = 302): never
+function redirect(string $path, int $code = 302)
 {
     header('Location: ' . (preg_match('~^https?://~', $path) ? $path : url($path)), true, $code);
     exit;
@@ -81,11 +92,14 @@ function plural(int $n, string $one, string $few, string $many): string
     if ($n >= 11 && $n <= 14) {
         return $many;
     }
-    return match ($n % 10) {
-        1 => $one,
-        2, 3, 4 => $few,
-        default => $many,
-    };
+    $n %= 10;
+    if ($n === 1) {
+        return $one;
+    }
+    if ($n >= 2 && $n <= 4) {
+        return $few;
+    }
+    return $many;
 }
 
 function now(): string
@@ -129,11 +143,14 @@ function logo_html(): string
     if (setting('logo_mode') === 'image' && setting('logo_image') !== '') {
         return '<a class="logo logo--img" href="' . $home . '" aria-label="На главную"><img src="' . e(url(setting('logo_image'))) . '" alt="' . e(setting('site_name')) . '"></a>';
     }
-    $icon = match (setting('logo_icon_mode', 'diamond')) {
-        'none'  => '',
-        'image' => setting('logo_icon') !== '' ? '<img class="logo-icon" src="' . e(url(setting('logo_icon'))) . '" alt="">' : LOGO_DIAMOND_SVG,
-        default => LOGO_DIAMOND_SVG,
-    };
+    $iconMode = setting('logo_icon_mode', 'diamond');
+    if ($iconMode === 'none') {
+        $icon = '';
+    } elseif ($iconMode === 'image' && setting('logo_icon') !== '') {
+        $icon = '<img class="logo-icon" src="' . e(url(setting('logo_icon'))) . '" alt="">';
+    } else {
+        $icon = LOGO_DIAMOND_SVG;
+    }
     $parts = array_filter([
         setting('logo_left') !== '' ? '<span>' . e(setting('logo_left')) . '</span>' : '',
         $icon,
@@ -149,11 +166,8 @@ function favicon_tag(): string
     if ($icon === '') {
         return '<link rel="icon" href="' . e(asset('assets/favicon.svg')) . '" type="image/svg+xml">';
     }
-    $type = match (pathinfo($icon, PATHINFO_EXTENSION)) {
-        'svg'   => 'image/svg+xml',
-        'ico'   => 'image/x-icon',
-        default => 'image/png',
-    };
+    $types = ['svg' => 'image/svg+xml', 'ico' => 'image/x-icon'];
+    $type = $types[pathinfo($icon, PATHINFO_EXTENSION)] ?? 'image/png';
     return '<link rel="icon" href="' . e(url($icon)) . '" type="' . $type . '">';
 }
 
@@ -164,8 +178,8 @@ function site_menu(): array
     if ($menu !== null) {
         return $menu;
     }
-    $sections = db()->query('SELECT * FROM sections WHERE in_menu = 1 ORDER BY sort, id')->fetchAll();
-    $pages = db()->query('SELECT id, section_id, slug, title FROM pages WHERE published = 1 ORDER BY sort, id')->fetchAll();
+    $sections = db_all('SELECT * FROM sections WHERE in_menu = 1 ORDER BY sort, id');
+    $pages = db_all('SELECT id, section_id, slug, title FROM pages WHERE published = 1 ORDER BY sort, id');
     $bySection = [];
     foreach ($pages as $p) {
         $bySection[$p['section_id']][] = $p;
@@ -192,7 +206,7 @@ function category_trail(int $id): array
 }
 
 /** Адрес страницы каталога: /раздел/категория/подкатегория[/инструкция]. */
-function catalog_url(array $section, array $trail = [], ?string $materialSlug = null): string
+function catalog_url(array $section, array $trail = [], $materialSlug = null): string
 {
     $parts = [$section['slug']];
     foreach ($trail as $c) {
@@ -225,7 +239,7 @@ function csrf_field(): string
     return '<input type="hidden" name="_csrf" value="' . e(csrf_token()) . '">';
 }
 
-function csrf_check(): void
+function csrf_check()
 {
     $sent = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     $expected = $_SESSION['csrf'] ?? '';
@@ -235,7 +249,7 @@ function csrf_check(): void
     }
 }
 
-function flash(?string $msg = null, string $type = 'ok'): ?array
+function flash($msg = null, string $type = 'ok')
 {
     if ($msg !== null) {
         $_SESSION['flash'] = ['msg' => $msg, 'type' => $type];
@@ -250,5 +264,5 @@ function post(string $key, string $default = ''): string
 {
     $v = $_POST[$key] ?? $default;
     // Битые байты (не UTF-8) заменяем, чтобы в базу не попадал нечитаемый текст.
-    return is_string($v) ? trim(mb_scrub($v, 'UTF-8')) : $default;
+    return is_string($v) ? trim(mb_convert_encoding($v, 'UTF-8', 'UTF-8')) : $default;
 }

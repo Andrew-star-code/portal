@@ -23,11 +23,38 @@ function db(): PDO
     return $pdo;
 }
 
-function db_one(string $sql, array $params = []): ?array
+/**
+ * Строка результата с числами в виде int/float, как в PHP 8.1+.
+ * В PHP 7 драйвер SQLite отдаёт все значения строками, поэтому приводим их сами
+ * по фактическому типу значения в базе.
+ */
+function db_fetch(PDOStatement $st)
+{
+    $row = $st->fetch();
+    if ($row === false || PHP_VERSION_ID >= 80100) {
+        return $row;
+    }
+    $i = 0;
+    foreach ($row as $key => $value) {
+        if ($value !== null) {
+            $meta = $st->getColumnMeta($i);
+            $type = $meta['native_type'] ?? '';
+            if ($type === 'integer') {
+                $row[$key] = (int)$value;
+            } elseif ($type === 'double') {
+                $row[$key] = (float)$value;
+            }
+        }
+        $i++;
+    }
+    return $row;
+}
+
+function db_one(string $sql, array $params = [])
 {
     $st = db()->prepare($sql);
     $st->execute($params);
-    $row = $st->fetch();
+    $row = db_fetch($st);
     return $row === false ? null : $row;
 }
 
@@ -35,7 +62,11 @@ function db_all(string $sql, array $params = []): array
 {
     $st = db()->prepare($sql);
     $st->execute($params);
-    return $st->fetchAll();
+    $rows = [];
+    while (($row = db_fetch($st)) !== false) {
+        $rows[] = $row;
+    }
+    return $rows;
 }
 
 function db_exec(string $sql, array $params = []): int
@@ -46,7 +77,7 @@ function db_exec(string $sql, array $params = []): int
 }
 
 /** Пошаговые миграции: каждая база доводится до последней версии без потери данных. */
-function db_migrate(PDO $pdo): void
+function db_migrate(PDO $pdo)
 {
     $steps = [1 => 'db_migrate_v1', 2 => 'db_migrate_v2'];
     $version = (int)$pdo->query('PRAGMA user_version')->fetchColumn();
@@ -62,7 +93,7 @@ function db_migrate(PDO $pdo): void
     }
 }
 
-function db_migrate_v1(PDO $pdo): void
+function db_migrate_v1(PDO $pdo)
 {
     foreach ([
         'CREATE TABLE users (
@@ -128,7 +159,7 @@ function db_migrate_v1(PDO $pdo): void
 }
 
 /** v2: типы вкладок, каталоги с деревом категорий и файлами-инструкциями. */
-function db_migrate_v2(PDO $pdo): void
+function db_migrate_v2(PDO $pdo)
 {
     foreach ([
         "ALTER TABLE sections ADD COLUMN type TEXT NOT NULL DEFAULT 'dropdown'",
@@ -175,14 +206,14 @@ function db_migrate_v2(PDO $pdo): void
             ->execute([$sort, '<p>Инструкции по работе в системах автоматизированного проектирования.</p>']);
         $sid = (int)$pdo->lastInsertId();
         $ins = $pdo->prepare('INSERT INTO categories (section_id, slug, title, sort) VALUES (?, ?, ?, ?)');
-        foreach ([['fusion', 'Fusion'], ['solidworks', 'SolidWorks'], ['kompas', 'Компас']] as $i => [$slug, $title]) {
+        foreach ([['fusion', 'Fusion'], ['solidworks', 'SolidWorks'], ['kompas', 'Компас']] as $i => list($slug, $title)) {
             $ins->execute([$sid, $slug, $title, ($i + 1) * 10]);
         }
     }
 }
 
 /** Начальное наполнение — содержимое макета. */
-function db_seed(PDO $pdo): void
+function db_seed(PDO $pdo)
 {
     $now = now();
     $stub = '<p>Раздел находится в наполнении. Текст страницы можно изменить в админ-панели.</p>';
@@ -217,7 +248,7 @@ function db_seed(PDO $pdo): void
             ['contacts', 'Контакты', '<p>' . nl2br(e($settings['address']), false) . '</p>'],
             ['disclosure', 'Раскрытие информации', $stub],
         ]],
-        ['products', 'Продукция', array_map(fn($p) => [$p[0], $p[1], '<p>' . e($p[2]) . '.</p>'], $products)],
+        ['products', 'Продукция', array_map(function ($p) { return [$p[0], $p[1], '<p>' . e($p[2]) . '.</p>']; }, $products)],
         ['competencies', 'Компетенции', [
             ['development', 'Разработка', $stub],
             ['production', 'Производство', $stub],
@@ -232,16 +263,16 @@ function db_seed(PDO $pdo): void
     ];
     $insSection = $pdo->prepare('INSERT INTO sections (slug, title, sort) VALUES (?, ?, ?)');
     $insPage = $pdo->prepare('INSERT INTO pages (section_id, slug, title, body, sort, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
-    foreach ($sections as $i => [$slug, $title, $pages]) {
+    foreach ($sections as $i => list($slug, $title, $pages)) {
         $insSection->execute([$slug, $title, ($i + 1) * 10]);
         $sid = (int)$pdo->lastInsertId();
-        foreach ($pages as $j => [$pslug, $ptitle, $body]) {
+        foreach ($pages as $j => list($pslug, $ptitle, $body)) {
             $insPage->execute([$sid, $pslug, $ptitle, $body, ($j + 1) * 10, $now]);
         }
     }
 
     $insSlide = $pdo->prepare('INSERT INTO slides (title, motto, text, link, theme, sort) VALUES (?, ?, ?, ?, ?, ?)');
-    foreach ($products as $i => [$slug, $title, $text]) {
+    foreach ($products as $i => list($slug, $title, $text)) {
         $insSlide->execute([$title, $motto, $text, '/products/' . $slug, $i + 1, ($i + 1) * 10]);
     }
 
@@ -252,7 +283,7 @@ function db_seed(PDO $pdo): void
         ['2025-01-24', 'sotrudnichestvo-s-universitetom', 'Бюро и технический университет расширяют сотрудничество'],
     ];
     $insNews = $pdo->prepare('INSERT INTO news (slug, title, lead, body, published_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
-    foreach ($news as [$date, $slug, $title]) {
+    foreach ($news as list($date, $slug, $title)) {
         $insNews->execute([$slug, $title, '', '<p>Текст новости можно изменить в админ-панели.</p>', $date . ' 09:00:00', $now]);
     }
 }

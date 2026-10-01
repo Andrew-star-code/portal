@@ -41,7 +41,7 @@ function save_uploaded_file(array $file, array $types, int $maxMb, string $subdi
     if (!isset($types[$mime])) {
         throw new RuntimeException('Недопустимый тип файла. Разрешены: ' . strtoupper(implode(', ', array_unique($types))) . '.');
     }
-    if (str_starts_with($mime, 'image/') && $mime !== 'image/svg+xml' && @getimagesize($file['tmp_name']) === false) {
+    if (starts_with($mime, 'image/') && $mime !== 'image/svg+xml' && @getimagesize($file['tmp_name']) === false) {
         throw new RuntimeException('Файл повреждён или не является изображением.');
     }
 
@@ -69,12 +69,16 @@ function upload_limit_mb(int $appMax): int
     $toMb = function (string $v): int {
         $v = trim($v);
         $n = (float)$v;
-        return (int)match (strtolower(substr($v, -1))) {
-            'g' => $n * 1024,
-            'm' => $n,
-            'k' => $n / 1024,
-            default => $n / 1024 / 1024,
-        };
+        switch (strtolower(substr($v, -1))) {
+            case 'g':
+                return (int)($n * 1024);
+            case 'm':
+                return (int)$n;
+            case 'k':
+                return (int)($n / 1024);
+            default:
+                return (int)($n / 1024 / 1024);
+        }
     };
     $limits = [$appMax, $toMb((string)ini_get('upload_max_filesize'))];
     $post = $toMb((string)ini_get('post_max_size'));
@@ -85,7 +89,7 @@ function upload_limit_mb(int $appMax): int
 }
 
 /** Удаляет ранее загруженный файл (только внутри каталога загрузок). */
-function delete_upload(?string $rel): void
+function delete_upload($rel)
 {
     if (!$rel || !preg_match('~^uploads/(files/)?\d{4}/\d{2}/[a-f0-9]{16}\.(jpg|png|webp|gif|svg|ico|pdf|mp4|webm)$~', $rel)) {
         return;

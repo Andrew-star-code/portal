@@ -15,7 +15,7 @@ $kindLabel = ['pdf' => 'PDF', 'video' => 'Видео'];
     <?php if ($children): ?>
     <div class="tiles">
       <?php foreach ($children as $c): ?>
-      <a class="tile<?= $c['image'] ? ' has-img' : '' ?>" href="<?= e(catalog_url($section, [...$trail, $c])) ?>">
+      <a class="tile<?= $c['image'] ? ' has-img' : '' ?>" href="<?= e(catalog_url($section, array_merge($trail, [$c]))) ?>">
         <?php if ($c['image']): ?><img src="<?= e(url($c['image'])) ?>" alt="" loading="lazy"><?php endif ?>
         <span class="tile-title"><?= e($c['title']) ?></span>
         <span class="tile-meta"><?php

@@ -28,7 +28,7 @@ $items = [
   <aside class="sidebar">
     <a class="brand" href="<?= e(url('/admin')) ?>"><?php if (trim(setting('logo_left') . setting('logo_right')) !== ''): ?><?= e(setting('logo_left')) ?> <b><?= e(setting('logo_right')) ?></b><?php else: ?><?= e(setting('site_name')) ?><?php endif ?><small>админ-панель</small></a>
     <nav>
-      <?php foreach ($items as $key => [$href, $label]): ?>
+      <?php foreach ($items as $key => list($href, $label)): ?>
       <a href="<?= e(url($href)) ?>"<?= $nav === $key ? ' aria-current="page"' : '' ?>><?= e($label) ?></a>
       <?php endforeach ?>
     </nav>

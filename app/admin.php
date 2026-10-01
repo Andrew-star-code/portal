@@ -5,7 +5,7 @@ const LOGO_MODES = ['text' => 'Конструктор: текст + значок
 const LOGO_ICON_MODES = ['diamond' => 'Стандартный ромб', 'image' => 'Своя картинка', 'none' => 'Без значка'];
 const SLIDE_THEMES =[1 => 'Синяя', 2 => 'Бирюзовая', 3 => 'Серо-голубая', 4 => 'Коричневая', 5 => 'Оливковая'];
 
-function admin_dispatch(array $seg): void
+function admin_dispatch(array $seg)
 {
     admin_session_start();
     header('X-Robots-Tag: noindex, nofollow');
@@ -74,7 +74,7 @@ function admin_dispatch(array $seg): void
 
 // ---------------------------------------------------------------- общее
 
-function render_admin(string $view, array $vars = [], string $title = '', string $nav = ''): void
+function render_admin(string $view, array $vars = [], string $title = '', string $nav = '')
 {
     echo view('admin/layout', [
         'title'   => $title,
@@ -84,13 +84,13 @@ function render_admin(string $view, array $vars = [], string $title = '', string
     ]);
 }
 
-function admin_404(): void
+function admin_404()
 {
     http_response_code(404);
     render_admin('message', ['text' => 'Страница не найдена.'], 'Не найдено');
 }
 
-function unique_slug(string $table, string $slug, ?int $exceptId, string $scopeSql = '', array $scopeParams = []): string
+function unique_slug(string $table, string $slug, $exceptId, string $scopeSql = '', array $scopeParams = []): string
 {
     $candidate = $slug;
     for ($i = 2; ; $i++) {
@@ -104,7 +104,7 @@ function unique_slug(string $table, string $slug, ?int $exceptId, string $scopeS
 }
 
 /** Обрабатывает поле-картинку формы. Возвращает новое значение пути (или старое). */
-function handle_image_field(string $field, ?string $current, array &$errors, array $types = IMAGE_TYPES): ?string
+function handle_image_field(string $field, $current, array &$errors, array $types = IMAGE_TYPES)
 {
     $new = $current;
     if (!empty($_POST['remove_' . $field])) {
@@ -122,7 +122,7 @@ function handle_image_field(string $field, ?string $current, array &$errors, arr
     return $new;
 }
 
-function to_db_datetime(string $s): ?string
+function to_db_datetime(string $s)
 {
     $t = strtotime($s);
     return $t ? date('Y-m-d H:i:s', $t) : null;
@@ -130,7 +130,7 @@ function to_db_datetime(string $s): ?string
 
 // ---------------------------------------------------------------- вход
 
-function admin_login(bool $isPost): void
+function admin_login(bool $isPost)
 {
     if (current_user()) {
         redirect('/admin');
@@ -151,7 +151,7 @@ function admin_login(bool $isPost): void
     echo view('admin/login', ['error' => $error, 'login' => $login, 'noUsers' => $noUsers]);
 }
 
-function admin_setup(bool $isPost): void
+function admin_setup(bool $isPost)
 {
     $key = (string)config('setup_key');
     if ($key === '' || db_one('SELECT 1 FROM users LIMIT 1')) {
@@ -182,7 +182,7 @@ function admin_setup(bool $isPost): void
     echo view('admin/setup', ['errors' => $errors, 'login' => $login]);
 }
 
-function admin_404_bare(): void
+function admin_404_bare()
 {
     http_response_code(404);
     echo 'Not found';
@@ -190,7 +190,7 @@ function admin_404_bare(): void
 
 // ---------------------------------------------------------------- дашборд
 
-function admin_dashboard(): void
+function admin_dashboard()
 {
     $counts = [
         'news'   => (int)db_one('SELECT COUNT(*) n FROM news')['n'],
@@ -204,7 +204,7 @@ function admin_dashboard(): void
 
 // ---------------------------------------------------------------- CRUD
 
-function admin_crud(string $area, ?string $id, ?string $action, bool $isPost): void
+function admin_crud(string $area, $id, $action, bool $isPost)
 {
     $titles = [
         'news' => 'Новости', 'pages' => 'Страницы', 'sections' => 'Разделы', 'slides' => 'Слайды', 'users' => 'Пользователи',
@@ -249,7 +249,7 @@ function admin_crud(string $area, ?string $id, ?string $action, bool $isPost): v
     $values = $item ?? [];
     if ($isPost) {
         $fn = 'admin_' . $area . '_save';
-        [$values, $errors, $newId] = $fn($item);
+        list($values, $errors, $newId) = $fn($item);
         if (!$errors) {
             flash('Сохранено.');
             redirect('/admin/' . $area . '/' . $newId);
@@ -276,7 +276,7 @@ function admin_news_index(): array
     return ['items' => $items, 'page' => $page, 'pages' => max(1, (int)ceil($total / $per))];
 }
 
-function admin_news_save(?array $item): array
+function admin_news_save($item): array
 {
     $v = [
         'title'        => post('title'),
@@ -303,7 +303,7 @@ function admin_news_save(?array $item): array
 
     $params = [$v['slug'], $v['title'], $v['lead'], $v['body'], $v['image'], $v['published_at'], $v['is_published'], now()];
     if ($item) {
-        db_exec('UPDATE news SET slug=?, title=?, lead=?, body=?, image=?, published_at=?, is_published=?, updated_at=? WHERE id=?', [...$params, $item['id']]);
+        db_exec('UPDATE news SET slug=?, title=?, lead=?, body=?, image=?, published_at=?, is_published=?, updated_at=? WHERE id=?', array_merge($params, [$item['id']]));
         $id = (int)$item['id'];
         if ($item['image'] !== $v['image']) {
             delete_upload($item['image']);
@@ -315,7 +315,7 @@ function admin_news_save(?array $item): array
     return [$v, [], $id];
 }
 
-function admin_news_delete(array $item): ?string
+function admin_news_delete(array $item)
 {
     db_exec('DELETE FROM news WHERE id = ?', [$item['id']]);
     delete_upload($item['image']);
@@ -335,12 +335,12 @@ function admin_pages_index(): array
     return ['sections' => $sections, 'bySection' => $by];
 }
 
-function admin_pages_form_data(?array $item = null): array
+function admin_pages_form_data($item = null): array
 {
     return ['sections' => db_all("SELECT id, slug, title FROM sections WHERE type = 'dropdown' OR id = ? ORDER BY sort, id", [$item['section_id'] ?? 0])];
 }
 
-function admin_pages_save(?array $item): array
+function admin_pages_save($item): array
 {
     $v = [
         'section_id' => (int)post('section_id'),
@@ -363,7 +363,7 @@ function admin_pages_save(?array $item): array
     }
     $params = [$v['section_id'], $v['slug'], $v['title'], $v['body'], $v['sort'], $v['published'], now()];
     if ($item) {
-        db_exec('UPDATE pages SET section_id=?, slug=?, title=?, body=?, sort=?, published=?, updated_at=? WHERE id=?', [...$params, $item['id']]);
+        db_exec('UPDATE pages SET section_id=?, slug=?, title=?, body=?, sort=?, published=?, updated_at=? WHERE id=?', array_merge($params, [$item['id']]));
         $id = (int)$item['id'];
     } else {
         db_exec('INSERT INTO pages (section_id, slug, title, body, sort, published, updated_at) VALUES (?,?,?,?,?,?,?)', $params);
@@ -372,7 +372,7 @@ function admin_pages_save(?array $item): array
     return [$v, [], $id];
 }
 
-function admin_pages_delete(array $item): ?string
+function admin_pages_delete(array $item)
 {
     db_exec('DELETE FROM pages WHERE id = ?', [$item['id']]);
     return null;
@@ -397,7 +397,7 @@ const SECTION_TYPES = [
     'link'     => 'Ссылка на другую страницу или сайт',
 ];
 
-function admin_sections_form_data(?array $item): array
+function admin_sections_form_data($item): array
 {
     return $item ? [
         'pagesCount'   => (int)db_one('SELECT COUNT(*) n FROM pages WHERE section_id = ?', [$item['id']])['n'],
@@ -405,7 +405,7 @@ function admin_sections_form_data(?array $item): array
     ] : ['pagesCount' => 0, 'catalogCount' => 0];
 }
 
-function admin_sections_save(?array $item): array
+function admin_sections_save($item): array
 {
     $v = [
         'title'   => post('title'),
@@ -436,7 +436,7 @@ function admin_sections_save(?array $item): array
     }
     $params = [$v['slug'], $v['title'], $v['sort'], $v['in_menu'], $v['type'], $v['link'], $v['body']];
     if ($item) {
-        db_exec('UPDATE sections SET slug=?, title=?, sort=?, in_menu=?, type=?, link=?, body=? WHERE id=?', [...$params, $item['id']]);
+        db_exec('UPDATE sections SET slug=?, title=?, sort=?, in_menu=?, type=?, link=?, body=? WHERE id=?', array_merge($params, [$item['id']]));
         $id = (int)$item['id'];
     } else {
         db_exec('INSERT INTO sections (slug, title, sort, in_menu, type, link, body) VALUES (?,?,?,?,?,?,?)', $params);
@@ -445,7 +445,7 @@ function admin_sections_save(?array $item): array
     return [$v, [], $id];
 }
 
-function admin_sections_delete(array $item): ?string
+function admin_sections_delete(array $item)
 {
     if (db_one('SELECT 1 FROM pages WHERE section_id = ?', [$item['id']])) {
         return 'В разделе есть страницы — сначала удалите или перенесите их.';
@@ -464,7 +464,7 @@ function admin_slides_index(): array
     return ['items' => db_all('SELECT * FROM slides ORDER BY sort, id')];
 }
 
-function admin_slides_save(?array $item): array
+function admin_slides_save($item): array
 {
     $v = [
         'title'     => post('title'),
@@ -496,7 +496,7 @@ function admin_slides_save(?array $item): array
     }
     $params = [$v['title'], $v['motto'], $v['text'], $v['link'], $v['theme'], $v['image'], $v['sort'], $v['is_active']];
     if ($item) {
-        db_exec('UPDATE slides SET title=?, motto=?, text=?, link=?, theme=?, image=?, sort=?, is_active=? WHERE id=?', [...$params, $item['id']]);
+        db_exec('UPDATE slides SET title=?, motto=?, text=?, link=?, theme=?, image=?, sort=?, is_active=? WHERE id=?', array_merge($params, [$item['id']]));
         $id = (int)$item['id'];
         if ($item['image'] !== $v['image']) {
             delete_upload($item['image']);
@@ -508,7 +508,7 @@ function admin_slides_save(?array $item): array
     return [$v, [], $id];
 }
 
-function admin_slides_delete(array $item): ?string
+function admin_slides_delete(array $item)
 {
     db_exec('DELETE FROM slides WHERE id = ?', [$item['id']]);
     delete_upload($item['image']);
@@ -523,14 +523,14 @@ function catalog_sections(): array
 }
 
 /** Раздел-каталог из ?section= или из сохраняемой записи; null — если не каталог. */
-function catalog_section(?array $item): ?array
+function catalog_section($item)
 {
     $sid = $item['section_id'] ?? ($_GET['section'] ?? post('section_id'));
     return db_one("SELECT * FROM sections WHERE id = ? AND type = 'catalog'", [(int)$sid]);
 }
 
 /** Категории раздела в порядке дерева: [id => '— — Название'], без ветки $excludeId. */
-function category_options(int $sectionId, ?int $excludeId = null): array
+function category_options(int $sectionId, $excludeId = null): array
 {
     $byParent = [];
     foreach (db_all('SELECT id, parent_id, title FROM categories WHERE section_id = ? ORDER BY sort, id', [$sectionId]) as $c) {
@@ -553,7 +553,7 @@ function category_options(int $sectionId, ?int $excludeId = null): array
 }
 
 /** Адрес уникален среди соседних категорий и инструкций (у них общее пространство URL). */
-function unique_catalog_slug(string $slug, int $sectionId, ?int $parentId, string $table, ?int $exceptId): string
+function unique_catalog_slug(string $slug, int $sectionId, $parentId, string $table, $exceptId): string
 {
     $candidate = $slug;
     for ($i = 2; ; $i++) {
@@ -577,7 +577,9 @@ function admin_categories_index(): array
             $current = $s;
         }
     }
-    $current ??= $sections[0] ?? null;
+    if ($current === null) {
+        $current = $sections[0] ?? null;
+    }
     if (!$current) {
         return ['sections' => [], 'current' => null];
     }
@@ -592,7 +594,7 @@ function admin_categories_index(): array
     return ['sections' => $sections, 'current' => $current, 'cats' => $cats, 'mats' => $mats];
 }
 
-function admin_categories_form_data(?array $item, array $v): array
+function admin_categories_form_data($item, array $v): array
 {
     $section = catalog_section($item);
     return [
@@ -601,7 +603,7 @@ function admin_categories_form_data(?array $item, array $v): array
     ];
 }
 
-function admin_categories_save(?array $item): array
+function admin_categories_save($item): array
 {
     $section = catalog_section($item);
     $v = [
@@ -624,7 +626,7 @@ function admin_categories_save(?array $item): array
     }
     if ($v['parent_id'] !== null) {
         $parent = db_one('SELECT id FROM categories WHERE id = ? AND section_id = ?', [$v['parent_id'], $v['section_id']]);
-        $inOwnBranch = $item && in_array((int)$item['id'], array_map(fn($c) => (int)$c['id'], category_trail($v['parent_id'])), true);
+        $inOwnBranch = $item && in_array((int)$item['id'], array_map(function ($c) { return (int)$c['id']; }, category_trail($v['parent_id'])), true);
         if (!$parent || $inOwnBranch) {
             $errors['parent_id'] = 'Нельзя вложить категорию в саму себя или в свою подкатегорию.';
         }
@@ -640,19 +642,19 @@ function admin_categories_save(?array $item): array
     }
     $params = [$v['parent_id'], $v['slug'], $v['title'], $v['description'], $v['image'], $v['sort'], $v['published']];
     if ($item) {
-        db_exec('UPDATE categories SET parent_id=?, slug=?, title=?, description=?, image=?, sort=?, published=? WHERE id=?', [...$params, $item['id']]);
+        db_exec('UPDATE categories SET parent_id=?, slug=?, title=?, description=?, image=?, sort=?, published=? WHERE id=?', array_merge($params, [$item['id']]));
         $id = (int)$item['id'];
         if ($item['image'] !== $v['image']) {
             delete_upload($item['image']);
         }
     } else {
-        db_exec('INSERT INTO categories (parent_id, slug, title, description, image, sort, published, section_id) VALUES (?,?,?,?,?,?,?,?)', [...$params, $v['section_id']]);
+        db_exec('INSERT INTO categories (parent_id, slug, title, description, image, sort, published, section_id) VALUES (?,?,?,?,?,?,?,?)', array_merge($params, [$v['section_id']]));
         $id = (int)db()->lastInsertId();
     }
     return [$v, [], $id];
 }
 
-function admin_categories_delete(array $item): ?string
+function admin_categories_delete(array $item)
 {
     if (db_one('SELECT 1 FROM categories WHERE parent_id = ? UNION SELECT 1 FROM materials WHERE category_id = ?', [$item['id'], $item['id']])) {
         return 'В категории есть подкатегории или инструкции — сначала удалите или перенесите их.';
@@ -672,7 +674,7 @@ function admin_materials_index(): array
     redirect('/admin/categories');
 }
 
-function admin_materials_form_data(?array $item, array $v): array
+function admin_materials_form_data($item, array $v): array
 {
     $section = catalog_section($item);
     return [
@@ -682,7 +684,7 @@ function admin_materials_form_data(?array $item, array $v): array
     ];
 }
 
-function admin_materials_save(?array $item): array
+function admin_materials_save($item): array
 {
     $section = catalog_section($item);
     $v = [
@@ -718,7 +720,7 @@ function admin_materials_save(?array $item): array
             $v['file_path'] = $newFile;
             $v['file_name'] = clean_file_name((string)$file['name'], $newFile);
             $v['file_size'] = (int)filesize(rtrim(config('uploads_dir'), '/\\') . '/' . substr($newFile, strlen('uploads/')));
-            $v['kind'] = str_ends_with($newFile, '.pdf') ? 'pdf' : 'video';
+            $v['kind'] = ends_with($newFile, '.pdf') ? 'pdf' : 'video';
         } catch (RuntimeException $e) {
             $errors['file'] = $e->getMessage();
         }
@@ -744,13 +746,13 @@ function admin_materials_save(?array $item): array
 
     $params = [$v['category_id'], $v['slug'], $v['title'], $v['description'], $v['file_path'], $v['file_name'], $v['file_size'], $v['kind'], $v['sort'], $v['published'], now()];
     if ($item) {
-        db_exec('UPDATE materials SET category_id=?, slug=?, title=?, description=?, file_path=?, file_name=?, file_size=?, kind=?, sort=?, published=?, updated_at=? WHERE id=?', [...$params, $item['id']]);
+        db_exec('UPDATE materials SET category_id=?, slug=?, title=?, description=?, file_path=?, file_name=?, file_size=?, kind=?, sort=?, published=?, updated_at=? WHERE id=?', array_merge($params, [$item['id']]));
         $id = (int)$item['id'];
         if ($newFile && $item['file_path'] !== $newFile) {
             delete_upload($item['file_path']);
         }
     } else {
-        db_exec('INSERT INTO materials (category_id, slug, title, description, file_path, file_name, file_size, kind, sort, published, updated_at, section_id, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', [...$params, $v['section_id'], now()]);
+        db_exec('INSERT INTO materials (category_id, slug, title, description, file_path, file_name, file_size, kind, sort, published, updated_at, section_id, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', array_merge($params, [$v['section_id'], now()]));
         $id = (int)db()->lastInsertId();
     }
     return [$v, [], $id];
@@ -765,7 +767,7 @@ function clean_file_name(string $original, string $savedPath): string
     return mb_substr($base !== '' ? $base : 'file', 0, 120) . '.' . $ext;
 }
 
-function admin_materials_delete(array $item): ?string
+function admin_materials_delete(array $item)
 {
     db_exec('DELETE FROM materials WHERE id = ?', [$item['id']]);
     delete_upload($item['file_path']);
@@ -784,7 +786,7 @@ function admin_users_index(): array
     return ['items' => db_all('SELECT id, login, created_at FROM users ORDER BY login'), 'me' => current_user()];
 }
 
-function admin_users_save(?array $item): array
+function admin_users_save($item): array
 {
     $v = ['login' => post('login')];
     $pass = (string)($_POST['password'] ?? '');
@@ -815,7 +817,7 @@ function admin_users_save(?array $item): array
     return [$v, [], $id];
 }
 
-function admin_users_delete(array $item): ?string
+function admin_users_delete(array $item)
 {
     if ((int)$item['id'] === (int)current_user()['id']) {
         return 'Нельзя удалить самого себя.';
@@ -826,7 +828,7 @@ function admin_users_delete(array $item): ?string
 
 // ---------------------------------------------------------------- настройки, пароль, загрузка
 
-function admin_settings(bool $isPost): void
+function admin_settings(bool $isPost)
 {
     $keys = ['site_name', 'logo_mode', 'logo_left', 'logo_icon_mode', 'logo_right', 'address', 'phone', 'email'];
     $images = ['logo_image' => LOGO_TYPES, 'logo_icon' => LOGO_TYPES, 'favicon' => FAVICON_TYPES]; // настройки-картинки и их форматы
@@ -898,7 +900,7 @@ function admin_settings(bool $isPost): void
     render_admin('settings', ['v' => $v, 'errors' => $errors], 'Настройки', 'settings');
 }
 
-function admin_password(bool $isPost): void
+function admin_password(bool $isPost)
 {
     $errors = [];
     if ($isPost) {
@@ -922,7 +924,7 @@ function admin_password(bool $isPost): void
     render_admin('password', ['errors' => $errors], 'Смена пароля', 'password');
 }
 
-function admin_upload(): void
+function admin_upload()
 {
     header('Content-Type: application/json; charset=utf-8');
     try {
@@ -989,7 +991,7 @@ function f_image(string $name, string $label, array $v, array $errors, array $fo
     if (!empty($v[$name])) {
         $h .= '<div class="f-img"><img src="' . e(url($v[$name])) . '" alt=""><label class="f-check"><input type="checkbox" name="remove_' . e($name) . '" value="1"> Удалить изображение</label></div>';
     }
-    $h .= '<input type="file" name="' . e($name) . '" accept="' . e(implode(',', array_map(fn($f) => $accept[$f], $formats))) . '">';
+    $h .= '<input type="file" name="' . e($name) . '" accept="' . e(implode(',', array_map(function ($f) use ($accept) { return $accept[$f]; }, $formats))) . '">';
     $h .= '<div class="f-hint">' . e($list) . ', до ' . (int)config('upload_max_mb') . ' МБ.</div>';
     return $h . f_error($errors, $name) . '</div>';
 }
